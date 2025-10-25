@@ -1,0 +1,5 @@
+{
+  "name": "React Interactive Quiz",
+  "description": "A dynamic quiz application built with React and Tailwind CSS. It takes JSON data to generate multiple-choice questions, provides instant feedback with detailed explanations for both correct and incorrect answers, and allows users to navigate through questions.",
+  "requestFramePermissions": []
+}
