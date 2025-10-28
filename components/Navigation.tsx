@@ -12,15 +12,17 @@ interface NavigationProps {
 export const Navigation: React.FC<NavigationProps> = ({ onPrevious, onNext, isFirstQuestion, isLastQuestion, onToggleNavigator }) => {
   return (
     <div className="
-      fixed bottom-0 left-0 right-0 z-10 p-4 bg-slate-900/80 backdrop-blur-sm border-t border-slate-700 flex justify-between items-center
+      fixed bottom-0 left-0 right-0 z-10 p-2 bg-slate-900/80 backdrop-blur-sm border-t border-slate-700 flex justify-between items-center
       sm:static sm:bg-transparent sm:backdrop-blur-none sm:p-0 sm:mt-8 sm:pt-6
     ">
       <button 
         onClick={onPrevious} 
         disabled={isFirstQuestion}
-        className="px-6 py-2 bg-slate-700 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex flex-col items-center justify-center rounded-lg h-14 w-24 text-center sm:w-auto sm:h-auto sm:flex-row sm:px-6 sm:py-2 bg-slate-700 text-white font-semibold shadow-sm hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Previous
+        <span className="text-2xl leading-none sm:hidden">&larr;</span>
+        <span className="text-[10px] mt-1 font-normal tracking-wider sm:hidden">Previous</span>
+        <span className="hidden sm:inline">Previous</span>
       </button>
 
       <button
@@ -35,9 +37,11 @@ export const Navigation: React.FC<NavigationProps> = ({ onPrevious, onNext, isFi
 
       <button 
         onClick={onNext}
-        className="px-6 py-2 bg-cyan-600 text-white font-bold rounded-lg shadow-md hover:bg-cyan-500 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed disabled:shadow-none"
+        className="flex flex-col items-center justify-center rounded-lg h-14 w-24 text-center sm:w-auto sm:h-auto sm:flex-row sm:px-6 sm:py-2 bg-cyan-600 text-white font-bold shadow-md hover:bg-cyan-500 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed disabled:shadow-none"
       >
-        {isLastQuestion ? 'Finish Quiz' : 'Next'}
+        <span className="text-2xl leading-none sm:hidden">&rarr;</span>
+        <span className="text-[10px] mt-1 font-normal tracking-wider sm:hidden">{isLastQuestion ? 'Finish' : 'Next'}</span>
+        <span className="hidden sm:inline">{isLastQuestion ? 'Finish Quiz' : 'Next'}</span>
       </button>
     </div>
   );

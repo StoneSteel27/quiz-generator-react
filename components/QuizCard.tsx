@@ -34,11 +34,59 @@ const ChevronDownIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+const ArrowsPointingOutIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75v4.5m0-4.5h-4.5m4.5 0L15 9m5.25 11.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
+    </svg>
+);
+
+
+const ExplanationModal: React.FC<{ content: string | null; onClose: () => void }> = ({ content, onClose }) => {
+  return (
+    <AnimatePresence>
+      {content && (
+        <motion.div
+          key="explanation-modal-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.div
+            key="explanation-modal-content"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="flex justify-between items-center p-4 border-b border-slate-700">
+              <h3 className="text-lg font-bold text-slate-100">Explanation</h3>
+              <button onClick={onClose} className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" aria-label="Close explanation">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </header>
+            <div className="p-6 text-slate-300 max-h-[70vh] overflow-y-auto">
+              <p className="whitespace-pre-wrap">{content}</p>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
 
 export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, userAnswer, onAnswer, onUnsubmit }) => {
   const [selectedOptionIndices, setSelectedOptionIndices] = useState<number[]>([]);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [expandedExplanations, setExpandedExplanations] = useState<number[]>([]);
+  const [modalExplanation, setModalExplanation] = useState<string | null>(null);
 
   useEffect(() => {
     const submitted = !!userAnswer;
@@ -103,7 +151,8 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
 
   return (
     <div>
-      <h2 className="text-lg sm:text-2xl font-normal sm:font-semibold mb-6 text-slate-100">{question.questionText}</h2>
+      <ExplanationModal content={modalExplanation} onClose={() => setModalExplanation(null)} />
+      <h2 className="text-lg sm:text-2xl font-normal sm:font-semibold mb-6 text-slate-100 max-h-48 overflow-y-auto sm:max-h-none sm:overflow-visible">{question.questionText}</h2>
       <div className="space-y-3">
         {question.options.map((option, index) => (
           <div key={index}>
@@ -131,7 +180,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
                 )}
               </div>
               <div className="flex-grow min-w-0">
-                <p className="text-slate-200 break-words">{option.text}</p>
+                <p className="text-slate-200 break-words max-h-24 overflow-y-auto sm:max-h-none sm:overflow-visible">{option.text}</p>
                 {isSubmitted && (
                    <div className="mt-2">
                     <div className="hidden sm:block"> {/* Desktop: Show explanation directly */}
@@ -141,18 +190,39 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
                     </div>
 
                     <div className="block sm:hidden"> {/* Mobile: Show toggle button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleExplanation(index);
-                        }}
-                        className="flex items-center text-sm text-slate-400 hover:text-cyan-400 transition-colors"
-                        aria-expanded={expandedExplanations.includes(index)}
-                        aria-controls={`explanation-${index}`}
-                      >
-                        <span>{expandedExplanations.includes(index) ? 'Hide' : 'Show'} explanation</span>
-                        <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform duration-300 ${expandedExplanations.includes(index) ? 'rotate-180' : ''}`} />
-                      </button>
+                        <div className="flex justify-between items-center w-full">
+                            <button
+                                onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleExplanation(index);
+                                }}
+                                className="flex items-center text-sm text-slate-400 hover:text-cyan-400 transition-colors"
+                                aria-expanded={expandedExplanations.includes(index)}
+                                aria-controls={`explanation-${index}`}
+                            >
+                                <span>{expandedExplanations.includes(index) ? 'Hide' : 'Show'} explanation</span>
+                                <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform duration-300 ${expandedExplanations.includes(index) ? 'rotate-180' : ''}`} />
+                            </button>
+                            <AnimatePresence>
+                                {expandedExplanations.includes(index) && (
+                                    <motion.button
+                                        key={`expand-btn-${index}`}
+                                        initial={{ opacity: 0, scale: 0.5 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.5 }}
+                                        transition={{ duration: 0.2 }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setModalExplanation(option.explanation);
+                                        }}
+                                        className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                                        aria-label="Expand explanation"
+                                    >
+                                        <ArrowsPointingOutIcon className="w-4 h-4" />
+                                    </motion.button>
+                                )}
+                            </AnimatePresence>
+                        </div>
                       <AnimatePresence>
                         {expandedExplanations.includes(index) && (
                           <motion.div
@@ -163,7 +233,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.3 }}
                           >
-                            <p className={`pt-2 text-sm ${option.isCorrect ? 'text-green-300' : 'text-red-300'} break-words`}>
+                            <p className={`pt-2 text-sm ${option.isCorrect ? 'text-green-300' : 'text-red-300'} break-words max-h-28 overflow-y-auto`}>
                               {option.explanation}
                             </p>
                           </motion.div>

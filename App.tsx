@@ -7,6 +7,55 @@ import { QuestionNavigator } from './components/QuestionNavigator';
 import { type Question, type Answer } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// --- Confirmation Modal ---
+interface ConfirmationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  children: React.ReactNode;
+}
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, title, children }) => {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          key="confirmation-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.div
+            key="confirmation-content"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 text-center">
+              <h3 className="text-xl font-bold text-slate-100 mb-2">{title}</h3>
+              <div className="text-slate-400">{children}</div>
+            </div>
+            <footer className="px-6 py-4 bg-slate-800/50 flex justify-end items-center gap-3 border-t border-slate-700">
+              <button onClick={onConfirm} className="px-4 py-2 w-full bg-red-600 text-white font-bold rounded-lg shadow-md hover:bg-red-500 transition-all">
+                Confirm
+              </button>
+              <button onClick={onClose} className="px-4 py-2 w-full bg-slate-700 text-white font-bold rounded-lg shadow-md hover:bg-slate-600 transition-colors">
+                Cancel
+              </button>
+            </footer>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
 // --- Storage Utilities ---
 const setCookie = (name: string, value: string, days: number) => {
   let expires = "";
@@ -234,6 +283,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<View>('loader');
   const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
+  const [isChangeQuizModalOpen, setIsChangeQuizModalOpen] = useState(false);
 
   // --- Data Loading and Initialization ---
   const initializeQuiz = (data: Question[], savedProgress?: Answer[]) => {
@@ -444,10 +494,24 @@ const App: React.FC = () => {
           const currentAnswer = answers.find(a => a.questionIndex === currentQuestionIndex);
           return (
              <div className="w-full max-w-2xl mx-auto">
-                <header className="text-center mb-6 relative">
-                  <h1 className="text-3xl sm:text-4xl font-bold text-cyan-400">JSON to Quiz</h1>
-                  <p className="text-slate-400 mt-2">Test your knowledge with this interactive quiz.</p>
-                  <button onClick={changeQuiz} className="absolute top-0 right-0 text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-1 px-3 rounded-md transition-colors">
+                <ConfirmationModal
+                    isOpen={isChangeQuizModalOpen}
+                    onClose={() => setIsChangeQuizModalOpen(false)}
+                    onConfirm={() => {
+                        setIsChangeQuizModalOpen(false);
+                        changeQuiz();
+                    }}
+                    title="Change Quiz?"
+                >
+                    <p>Are you sure? Your current progress will be reset.</p>
+                </ConfirmationModal>
+                <header className="flex justify-between items-center mb-4 sm:block sm:text-center sm:mb-6 sm:relative">
+                  <h1 className="text-xl sm:text-4xl font-bold text-cyan-400">JSON to Quiz</h1>
+                  <p className="hidden sm:block text-slate-400 mt-2">Test your knowledge with this interactive quiz.</p>
+                  <button 
+                    onClick={() => setIsChangeQuizModalOpen(true)} 
+                    className="text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 px-4 rounded-lg transition-colors sm:absolute sm:top-0 sm:right-0 sm:py-1 sm:px-3 sm:rounded-md"
+                  >
                     Change
                   </button>
                 </header>
