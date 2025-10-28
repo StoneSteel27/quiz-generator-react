@@ -3,6 +3,7 @@ import { QuizCard } from './components/QuizCard';
 import { Navigation } from './components/Navigation';
 import { ProgressBar } from './components/ProgressBar';
 import { ResultCard } from './components/ResultCard';
+import { QuestionNavigator } from './components/QuestionNavigator';
 import { type Question, type Answer } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -232,6 +233,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<View>('loader');
+  const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
 
   // --- Data Loading and Initialization ---
   const initializeQuiz = (data: Question[], savedProgress?: Answer[]) => {
@@ -450,7 +452,20 @@ const App: React.FC = () => {
                   </button>
                 </header>
                 
-                <main className="bg-slate-800 rounded-xl shadow-2xl shadow-slate-950/50 p-4 sm:p-6 md:p-8 relative overflow-hidden">
+                <main className={`bg-slate-800 rounded-xl shadow-2xl shadow-slate-950/50 p-4 sm:p-6 md:p-8 relative overflow-hidden ${!isQuizFinished ? 'pb-24 sm:pb-8 md:pb-8' : ''}`}>
+                    {!isQuizFinished && (
+                        <QuestionNavigator
+                            isOpen={isNavigatorOpen}
+                            totalQuestions={questions.length}
+                            answers={answers}
+                            currentQuestionIndex={currentQuestionIndex}
+                            onNavigate={(index) => {
+                                setCurrentQuestionIndex(index);
+                                setIsNavigatorOpen(false); // Close navigator on selection
+                            }}
+                            onClose={() => setIsNavigatorOpen(false)}
+                        />
+                    )}
                   <AnimatePresence mode="wait">
                     {isQuizFinished ? (
                       <ResultCard 
@@ -476,16 +491,19 @@ const App: React.FC = () => {
                           onUnsubmit={handleUnsubmit}
                           userAnswer={currentAnswer}
                         />
-                        <Navigation 
-                          onPrevious={handlePrevious}
-                          onNext={handleNext}
-                          isFirstQuestion={currentQuestionIndex === 0}
-                          isLastQuestion={currentQuestionIndex === questions.length - 1}
-                          isAnswered={!!currentAnswer}
-                        />
                       </motion.div>
                     )}
                   </AnimatePresence>
+                  
+                  {!isQuizFinished && (
+                    <Navigation 
+                      onPrevious={handlePrevious}
+                      onNext={handleNext}
+                      isFirstQuestion={currentQuestionIndex === 0}
+                      isLastQuestion={currentQuestionIndex === questions.length - 1}
+                      onToggleNavigator={() => setIsNavigatorOpen(prev => !prev)}
+                    />
+                  )}
                 </main>
               </div>
           );

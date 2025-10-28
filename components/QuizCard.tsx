@@ -103,7 +103,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
 
   return (
     <div>
-      <h2 className="text-xl sm:text-2xl font-semibold mb-6 text-slate-100">{question.questionText}</h2>
+      <h2 className="text-lg sm:text-2xl font-normal sm:font-semibold mb-6 text-slate-100">{question.questionText}</h2>
       <div className="space-y-3">
         {question.options.map((option, index) => (
           <div key={index}>
