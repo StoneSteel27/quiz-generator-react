@@ -81,6 +81,7 @@ const getCookie = (name: string): string | null => {
 const clearCookies = () => {
     setCookie('quizUrl', '', -1);
     setCookie('quizProgress', '', -1);
+    setCookie('lastQuestionIndex', '', -1);
 };
 
 const clearLocalStorage = () => {
@@ -286,18 +287,18 @@ const App: React.FC = () => {
   const [isChangeQuizModalOpen, setIsChangeQuizModalOpen] = useState(false);
 
   // --- Data Loading and Initialization ---
-  const initializeQuiz = (data: Question[], savedProgress?: Answer[]) => {
+  const initializeQuiz = (data: Question[], savedProgress?: Answer[], startingQuestionIndex?: number) => {
       if (!Array.isArray(data) || data.length === 0) {
         throw new Error('Invalid quiz format. The JSON must be a non-empty array of questions.');
       }
       setQuestions(data);
       setAnswers(savedProgress || []);
-      setCurrentQuestionIndex(0);
+      setCurrentQuestionIndex(startingQuestionIndex || 0);
       setIsQuizFinished(false);
       setCurrentView('quiz');
   }
 
-  const fetchQuizFromUrl = useCallback(async (url: string, savedProgress?: Answer[]) => {
+  const fetchQuizFromUrl = useCallback(async (url: string, savedProgress?: Answer[], startingQuestionIndex?: number) => {
     setIsLoading(true);
     setError(null);
     
@@ -312,7 +313,7 @@ const App: React.FC = () => {
       const data: Question[] = await response.json();
       
       clearLocalStorage();
-      initializeQuiz(data, savedProgress);
+      initializeQuiz(data, savedProgress, startingQuestionIndex);
       setQuizUrl(url);
       setCookie('quizUrl', url, 365);
     } catch (e) {
@@ -338,7 +339,9 @@ const App: React.FC = () => {
             const data: Question[] = JSON.parse(text);
             
             clearCookies();
-            initializeQuiz(data);
+            const savedProgress = JSON.parse(localStorage.getItem('localQuizProgress') || '[]');
+            const startingQuestionIndex = parseInt(getCookie('lastQuestionIndex') || '0', 10);
+            initializeQuiz(data, savedProgress, startingQuestionIndex);
             setQuizUrl(null);
             localStorage.setItem('localQuizData', text);
             localStorage.setItem('localQuizProgress', '[]');
@@ -373,19 +376,20 @@ const App: React.FC = () => {
   useEffect(() => {
     const savedUrl = getCookie('quizUrl');
     const localQuizData = localStorage.getItem('localQuizData');
+    const lastQuestionIndex = parseInt(getCookie('lastQuestionIndex') || '0', 10);
 
     if (savedUrl) {
       try {
         const savedProgress = JSON.parse(getCookie('quizProgress') || '[]');
-        fetchQuizFromUrl(savedUrl, savedProgress);
+        fetchQuizFromUrl(savedUrl, savedProgress, lastQuestionIndex);
       } catch {
-        fetchQuizFromUrl(savedUrl);
+        fetchQuizFromUrl(savedUrl, undefined, lastQuestionIndex);
       }
     } else if (localQuizData) {
       try {
         const data = JSON.parse(localQuizData);
         const savedProgress = JSON.parse(localStorage.getItem('localQuizProgress') || '[]');
-        initializeQuiz(data, savedProgress);
+        initializeQuiz(data, savedProgress, lastQuestionIndex);
       } catch (e) {
          setError("Failed to load saved quiz from local storage. It might be corrupted.");
          clearLocalStorage();
@@ -408,6 +412,12 @@ const App: React.FC = () => {
       localStorage.setItem('localQuizProgress', JSON.stringify(answers));
     }
   }, [answers, quizUrl, questions.length, currentView]);
+
+  useEffect(() => {
+    if (questions.length > 0 && currentView === 'quiz') {
+      setCookie('lastQuestionIndex', currentQuestionIndex.toString(), 7);
+    }
+  }, [currentQuestionIndex, questions.length, currentView]);
 
   // --- Quiz Interaction Handlers ---
   const handleAnswer = useCallback((questionIndex: number, selectedOptionIndices: number[]) => {
