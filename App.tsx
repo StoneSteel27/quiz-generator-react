@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { QuizCard } from './components/QuizCard';
 import { Navigation } from './components/Navigation';
@@ -6,6 +7,86 @@ import { ResultCard } from './components/ResultCard';
 import { QuestionNavigator } from './components/QuestionNavigator';
 import { type Question, type Answer } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// --- Type Definitions ---
+type FontSize = 'sm' | 'base' | 'lg';
+
+// --- Icon Components ---
+const GearIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+);
+
+
+// --- Settings Modal ---
+interface SettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  currentSize: FontSize;
+  onSizeChange: (size: FontSize) => void;
+}
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentSize, onSizeChange }) => {
+  const fontSizes: { key: FontSize; label: string }[] = [
+    { key: 'sm', label: 'Small' },
+    { key: 'base', label: 'Medium' },
+    { key: 'lg', label: 'Large' },
+  ];
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          key="settings-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.div
+            key="settings-content"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="flex justify-between items-center p-4 border-b border-slate-700">
+              <h3 className="text-lg font-bold text-slate-100">Settings</h3>
+              <button onClick={onClose} className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" aria-label="Close settings">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </header>
+            <div className="p-6">
+              <label className="block text-slate-300 font-semibold mb-3">Font Size</label>
+              <div className="flex justify-between gap-2">
+                {fontSizes.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => onSizeChange(key)}
+                    className={`w-full py-2 rounded-lg font-bold transition-colors ${
+                      currentSize === key
+                        ? 'bg-cyan-600 text-white shadow-md'
+                        : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
 
 // --- Confirmation Modal ---
 interface ConfirmationModalProps {
@@ -87,6 +168,7 @@ const clearCookies = () => {
 const clearLocalStorage = () => {
     localStorage.removeItem('localQuizData');
     localStorage.removeItem('localQuizProgress');
+    // We don't clear font size setting on purpose
 }
 
 // --- Demo Data and Template ---
@@ -113,23 +195,18 @@ const DEMO_QUIZ_DATA: Question[] = [
     ]
   },
   {
-    "questionText": "What is the purpose of the `useEffect` hook?",
+    "questionText": "Which of these is the `useEffect` hook lifecycle diagram?",
     "isMultiSelect": false,
     "options": [
       {
-        "text": "To manage component state",
+        "text": "This diagram of component state:\n\n![useState diagram](https://miro.medium.com/v2/resize:fit:1400/1*b_J1e-q3L5-5G-3fN6dO_Q.png)",
         "isCorrect": false,
-        "explanation": "`useState` or `useReducer` are the hooks used for managing component state."
+        "explanation": "This diagram shows `useState`, not `useEffect`."
       },
       {
-        "text": "To perform side effects in functional components",
+        "text": "This diagram showing side effects:\n\n![useEffect diagram](https://raw.githubusercontent.com/donavon/hook-flow/master/hook-flow.png)",
         "isCorrect": true,
-        "explanation": "`useEffect` is used for side effects like data fetching, subscriptions, or manually changing the DOM."
-      },
-      {
-        "text": "To create a reference to a DOM element",
-        "isCorrect": false,
-        "explanation": "`useRef` is the hook used for creating references to DOM elements or for storing any mutable value."
+        "explanation": "Correct! This diagram accurately shows the flow of `useEffect` with its dependencies."
       }
     ]
   },
@@ -138,8 +215,34 @@ const DEMO_QUIZ_DATA: Question[] = [
     "numericalAnswer": {
       "min": 100,
       "max": 100,
-      "explanation": "At standard atmospheric pressure (1 atm), water boils at **100° Celsius** (212° Fahrenheit)."
+      "explanation": "At standard atmospheric pressure (1 atm), water boils at **100° Celsius** (212° Fahrenheit), as shown in this phase diagram for water.\n\n![Water Phase Diagram](https://i.stack.imgur.com/xYt2D.png)"
     }
+  },
+  {
+    "questionText": "Identify the logos shown below:\n\n**Logo A:**\n\n![Vue Logo](https://v2.vuejs.org/images/logo.png)\n\n**Logo B:**\n\n![Angular Logo](https://angular.io/assets/images/logos/angular/angular.png)",
+    "isMultiSelect": true,
+    "options": [
+      {
+        "text": "Logo A is Vue.js",
+        "isCorrect": true,
+        "explanation": "Correct, the first logo is for Vue.js."
+      },
+      {
+        "text": "Logo B is React",
+        "isCorrect": false,
+        "explanation": "Incorrect, the second logo is for Angular."
+      },
+      {
+        "text": "Logo B is Angular",
+        "isCorrect": true,
+        "explanation": "Correct, the second logo is for Angular."
+      },
+      {
+        "text": "Logo A is Svelte",
+        "isCorrect": false,
+        "explanation": "Incorrect, the first logo is for Vue.js."
+      }
+    ]
   },
   {
     "questionText": "What is the famous formula derived by Albert Einstein? This involves: \n\n*   $E$: Energy\n*   $m$: mass\n*   $c$: speed of light",
@@ -200,7 +303,7 @@ const ManualViewer: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     <h2 className="text-2xl font-semibold text-slate-100 border-b border-slate-600 pb-2">Structure Guide</h2>
                     <div>
                         <h3 className="text-lg font-bold text-cyan-400">The `Question` Object</h3>
-                        <p className="text-sm text-slate-400 mb-2">Each object in the root array is a question. A question must have either an `options` array or a `numericalAnswer` object. The `questionText`, option `text`, and `explanation` fields all support Markdown and LaTeX.</p>
+                        <p className="text-sm text-slate-400 mb-2">Each object in the root array is a question. A question must have either an `options` array or a `numericalAnswer` object. The `questionText`, option `text`, and `explanation` fields all support Markdown and LaTeX. Images are also supported using `![alt text](url)`.</p>
                         <ul className="list-disc list-inside space-y-1 text-sm bg-slate-700/50 p-4 rounded-md">
                             <li><code className="bg-slate-900 px-1 rounded-sm">questionText</code>: (String, required) The question itself.</li>
                             <li><code className="bg-slate-900 px-1 rounded-sm">options</code>: (Array, for Multiple-Choice) An array of `Option` objects.</li>
@@ -324,6 +427,8 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('loader');
   const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
   const [isChangeQuizModalOpen, setIsChangeQuizModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [fontSize, setFontSize] = useState<FontSize>('base');
 
   // --- Data Loading and Initialization ---
   const initializeQuiz = (data: Question[], savedProgress?: Answer[], startingQuestionIndex?: number) => {
@@ -375,14 +480,25 @@ const App: React.FC = () => {
         try {
             const text = e.target?.result;
             if (typeof text !== 'string') throw new Error('Could not read file.');
-            const data: Question[] = JSON.parse(text);
+            
+            const processedText = text.replace(/(\$\$.*?\$\$|\$.*?\$)/gs, (match) => {
+                const placeholder = '___TEMP_DOUBLE_BS___';
+                // Temporarily replace existing `\\` with a placeholder
+                const withPlaceholders = match.replace(/\\\\/g, placeholder);
+                // Escape remaining single `\`
+                const escapedSingles = withPlaceholders.replace(/\\/g, '\\\\');
+                // Restore the original `\\` from placeholder
+                return escapedSingles.replace(new RegExp(placeholder, 'g'), '\\\\');
+            });
+
+            const data: Question[] = JSON.parse(processedText);
             
             clearCookies();
             const savedProgress = JSON.parse(localStorage.getItem('localQuizProgress') || '[]');
             const startingQuestionIndex = parseInt(getCookie('lastQuestionIndex') || '0', 10);
             initializeQuiz(data, savedProgress, startingQuestionIndex);
             setQuizUrl(null);
-            localStorage.setItem('localQuizData', text);
+            localStorage.setItem('localQuizData', processedText);
             localStorage.setItem('localQuizProgress', '[]');
         } catch (e) {
             const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -413,6 +529,13 @@ const App: React.FC = () => {
 
   // --- Effects ---
   useEffect(() => {
+    // Load font size from local storage
+    const savedSize = localStorage.getItem('quizFontSize') as FontSize | null;
+    if (savedSize && ['sm', 'base', 'lg'].includes(savedSize)) {
+      setFontSize(savedSize);
+    }
+    
+    // Load quiz data
     const savedUrl = getCookie('quizUrl');
     const localQuizData = localStorage.getItem('localQuizData');
     const lastQuestionIndex = parseInt(getCookie('lastQuestionIndex') || '0', 10);
@@ -441,6 +564,11 @@ const App: React.FC = () => {
       setCurrentView('loader');
     }
   }, [fetchQuizFromUrl]);
+  
+  useEffect(() => {
+    // Save font size to local storage
+    localStorage.setItem('quizFontSize', fontSize);
+  }, [fontSize]);
 
   useEffect(() => {
     if (questions.length === 0 || currentView !== 'quiz') return;
@@ -550,6 +678,12 @@ const App: React.FC = () => {
           const currentAnswer = answers.find(a => a.questionIndex === currentQuestionIndex);
           return (
              <div className="w-full max-w-2xl mx-auto">
+                <SettingsModal
+                    isOpen={isSettingsModalOpen}
+                    onClose={() => setIsSettingsModalOpen(false)}
+                    currentSize={fontSize}
+                    onSizeChange={setFontSize}
+                />
                 <ConfirmationModal
                     isOpen={isChangeQuizModalOpen}
                     onClose={() => setIsChangeQuizModalOpen(false)}
@@ -564,12 +698,21 @@ const App: React.FC = () => {
                 <header className="flex justify-between items-center mb-4 sm:block sm:text-center sm:mb-6 sm:relative">
                   <h1 className="text-xl sm:text-4xl font-bold text-cyan-400">JSON to Quiz</h1>
                   <p className="hidden sm:block text-slate-400 mt-2">Test your knowledge with this interactive quiz.</p>
-                  <button 
-                    onClick={() => setIsChangeQuizModalOpen(true)} 
-                    className="text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 px-4 rounded-lg transition-colors sm:absolute sm:top-0 sm:right-0 sm:py-1 sm:px-3 sm:rounded-md"
-                  >
-                    Change
-                  </button>
+                  <div className="flex items-center gap-2 sm:absolute sm:top-0 sm:right-0">
+                    <button 
+                        onClick={() => setIsSettingsModalOpen(true)}
+                        className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors"
+                        aria-label="Open settings"
+                    >
+                        <GearIcon className="w-5 h-5" />
+                    </button>
+                    <button 
+                        onClick={() => setIsChangeQuizModalOpen(true)} 
+                        className="text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 px-4 rounded-lg transition-colors sm:py-1 sm:px-3 sm:rounded-md"
+                    >
+                        Change
+                    </button>
+                  </div>
                 </header>
                 
                 <main className={`bg-slate-800 rounded-xl shadow-2xl shadow-slate-950/50 p-4 sm:p-6 md:p-8 relative overflow-hidden ${!isQuizFinished ? 'pb-24 sm:pb-8 md:pb-8' : ''}`}>
@@ -610,6 +753,7 @@ const App: React.FC = () => {
                           onAnswer={handleAnswer}
                           onUnsubmit={handleUnsubmit}
                           userAnswer={currentAnswer}
+                          fontSize={fontSize}
                         />
                       </motion.div>
                     )}

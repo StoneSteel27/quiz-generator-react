@@ -29,6 +29,19 @@
         scrollbar-width: thin;
         scrollbar-color: #475569 transparent; /* thumb and track color */
       }
+
+      /* 
+        Prevent KaTeX formulas from breaking due to word wrapping.
+        - .katex: Prevents all formulas from breaking internally.
+        - .katex-display: Makes block-level formulas horizontally scrollable if they overflow.
+      */
+      .katex {
+        white-space: nowrap;
+      }
+      .katex-display {
+        overflow-x: auto;
+        padding-bottom: 8px; /* Provides some space for the scrollbar */
+      }
     </style>
   <script type="importmap">
 {

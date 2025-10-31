@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { type Question, type Option, type Answer } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import MarkdownRenderer from './MarkdownRenderer';
+import ImageModal from './ImageModal';
 
 interface QuizCardProps {
   question: Question;
@@ -9,6 +11,7 @@ interface QuizCardProps {
   userAnswer?: Answer;
   onAnswer: (questionIndex: number, answerData: { selectedOptionIndices?: number[], numericalValue?: number }) => void;
   onUnsubmit: (questionIndex: number) => void;
+  fontSize: 'sm' | 'base' | 'lg';
 }
 
 const CheckCircleIcon: React.FC<{className?: string}> = ({ className }) => (
@@ -49,7 +52,7 @@ const ArrowsPointingOutIcon: React.FC<{ className?: string }> = ({ className }) 
 );
 
 
-const ExplanationModal: React.FC<{ content: string | null; onClose: () => void }> = ({ content, onClose }) => {
+const ExplanationModal: React.FC<{ content: string | null; onClose: () => void; onImageClick: (src: string) => void; }> = ({ content, onClose, onImageClick }) => {
   return (
     <AnimatePresence>
       {content && (
@@ -80,7 +83,7 @@ const ExplanationModal: React.FC<{ content: string | null; onClose: () => void }
               </button>
             </header>
             <div className="p-6 text-slate-300 max-h-[70vh] overflow-y-auto">
-              <MarkdownRenderer content={content} />
+              <MarkdownRenderer content={content} onImageClick={onImageClick} />
             </div>
           </motion.div>
         </motion.div>
@@ -90,13 +93,14 @@ const ExplanationModal: React.FC<{ content: string | null; onClose: () => void }
 };
 
 
-export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, userAnswer, onAnswer, onUnsubmit }) => {
+export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, userAnswer, onAnswer, onUnsubmit, fontSize }) => {
   const [selectedOptionIndices, setSelectedOptionIndices] = useState<number[]>([]);
   const [numericalInputValue, setNumericalInputValue] = useState<string>('');
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [expandedExplanations, setExpandedExplanations] = useState<number[]>([]);
   const [isNumericalExplanationExpanded, setIsNumericalExplanationExpanded] = useState<boolean>(false);
   const [modalExplanation, setModalExplanation] = useState<string | null>(null);
+  const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const submitted = !!userAnswer;
@@ -170,11 +174,24 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
     ? selectedOptionIndices.length === 0 
     : numericalInputValue.trim() === '';
 
+  const questionSizeClasses = {
+    sm: 'text-sm sm:text-lg',
+    base: 'text-base sm:text-xl',
+    lg: 'text-lg sm:text-2xl',
+  }[fontSize];
+
+  const optionSizeClasses = {
+    sm: 'text-sm',
+    base: 'text-base',
+    lg: 'text-lg',
+  }[fontSize];
+
   return (
     <div>
-      <ExplanationModal content={modalExplanation} onClose={() => setModalExplanation(null)} />
-      <div className="text-lg sm:text-2xl font-normal sm:font-semibold mb-6 text-slate-100 max-h-48 overflow-y-auto sm:max-h-none sm:overflow-visible">
-        <MarkdownRenderer content={question.questionText} />
+      <ImageModal imageUrl={modalImageUrl} onClose={() => setModalImageUrl(null)} />
+      <ExplanationModal content={modalExplanation} onClose={() => setModalExplanation(null)} onImageClick={setModalImageUrl} />
+      <div className={`font-semibold mb-6 text-slate-100 ${questionSizeClasses}`}>
+        <MarkdownRenderer content={question.questionText} onImageClick={setModalImageUrl} />
       </div>
       
       {question.options && (
@@ -191,14 +208,14 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
               >
                 {/* Text and Explanation Part */}
                 <div className="p-4">
-                  <div className="text-slate-200 break-words">
-                    <MarkdownRenderer content={option.text} />
+                  <div className={`text-slate-200 break-words ${optionSizeClasses}`}>
+                    <MarkdownRenderer content={option.text} onImageClick={setModalImageUrl} />
                   </div>
                   {isSubmitted && (
                     <div className="mt-2">
                       <div className="hidden sm:block"> {/* Desktop: Show explanation directly */}
                         <div className={`text-sm ${option.isCorrect ? 'text-green-300' : 'text-red-300'} break-words`}>
-                            <MarkdownRenderer content={option.explanation} />
+                            <MarkdownRenderer content={option.explanation} onImageClick={setModalImageUrl} />
                         </div>
                       </div>
 
@@ -247,7 +264,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
                               transition={{ duration: 0.3 }}
                             >
                               <div className={`pt-2 text-sm ${option.isCorrect ? 'text-green-300' : 'text-red-300'} break-words`}>
-                                <MarkdownRenderer content={option.explanation} />
+                                <MarkdownRenderer content={option.explanation} onImageClick={setModalImageUrl} />
                               </div>
                             </motion.div>
                           )}
@@ -271,7 +288,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
               onChange={(e) => setNumericalInputValue(e.target.value)}
               disabled={isSubmitted}
               placeholder="Enter your answer"
-              className="w-full px-4 py-3 bg-slate-700 border-2 border-slate-600 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition disabled:cursor-not-allowed disabled:opacity-70"
+              className={`w-full px-4 py-3 bg-slate-700 border-2 border-slate-600 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition disabled:cursor-not-allowed disabled:opacity-70 ${optionSizeClasses}`}
           />
           {isSubmitted && (
               <div className={`p-3 rounded-md text-sm ${userAnswer?.isCorrect ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
@@ -286,7 +303,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
                         {/* Desktop: Show explanation directly */}
                         <div className="hidden sm:block">
                              <div className={`break-words ${userAnswer?.isCorrect ? 'text-green-300' : 'text-red-300'}`}>
-                                <MarkdownRenderer content={question.numericalAnswer.explanation} />
+                                <MarkdownRenderer content={question.numericalAnswer.explanation} onImageClick={setModalImageUrl} />
                             </div>
                         </div>
 
@@ -336,7 +353,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
                                         transition={{ duration: 0.3 }}
                                     >
                                         <div className={`pt-2 break-words ${userAnswer?.isCorrect ? 'text-green-300' : 'text-red-300'}`}>
-                                            <MarkdownRenderer content={question.numericalAnswer.explanation} />
+                                            <MarkdownRenderer content={question.numericalAnswer.explanation} onImageClick={setModalImageUrl} />
                                         </div>
                                     </motion.div>
                                 )}
