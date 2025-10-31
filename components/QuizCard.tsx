@@ -6,7 +6,7 @@ interface QuizCardProps {
   question: Question;
   questionIndex: number;
   userAnswer?: Answer;
-  onAnswer: (questionIndex: number, selectedOptionIndices: number[]) => void;
+  onAnswer: (questionIndex: number, answerData: { selectedOptionIndices?: number[], numericalValue?: number }) => void;
   onUnsubmit: (questionIndex: number) => void;
 }
 
@@ -84,16 +84,20 @@ const ExplanationModal: React.FC<{ content: string | null; onClose: () => void }
 
 export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, userAnswer, onAnswer, onUnsubmit }) => {
   const [selectedOptionIndices, setSelectedOptionIndices] = useState<number[]>([]);
+  const [numericalInputValue, setNumericalInputValue] = useState<string>('');
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [expandedExplanations, setExpandedExplanations] = useState<number[]>([]);
+  const [isNumericalExplanationExpanded, setIsNumericalExplanationExpanded] = useState<boolean>(false);
   const [modalExplanation, setModalExplanation] = useState<string | null>(null);
 
   useEffect(() => {
     const submitted = !!userAnswer;
     setIsSubmitted(submitted);
     setSelectedOptionIndices(userAnswer?.selectedOptionIndices ?? []);
+    setNumericalInputValue(userAnswer?.numericalValue?.toString() ?? '');
     if (!submitted) {
        setExpandedExplanations([]); // Collapse all explanations on new question
+       setIsNumericalExplanationExpanded(false);
     }
   }, [userAnswer, questionIndex]);
 
@@ -112,8 +116,13 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
   };
 
   const handleSubmit = () => {
-    if (selectedOptionIndices.length === 0) return;
-    onAnswer(questionIndex, selectedOptionIndices);
+    if (question.options) {
+      if (selectedOptionIndices.length === 0) return;
+      onAnswer(questionIndex, { selectedOptionIndices });
+    } else if (question.numericalAnswer) {
+      if (numericalInputValue.trim() === '') return;
+      onAnswer(questionIndex, { numericalValue: parseFloat(numericalInputValue) });
+    }
     setIsSubmitted(true);
   };
   
@@ -136,7 +145,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
         if (option.isCorrect) {
             return `${baseClasses} bg-green-500/20 border-green-500 cursor-default`;
         }
-        if (userAnswer?.selectedOptionIndices.includes(optionIndex)) {
+        if (userAnswer?.selectedOptionIndices?.includes(optionIndex)) {
             return `${baseClasses} bg-red-500/20 border-red-500 cursor-default`;
         }
         return `${baseClasses} bg-slate-700 border-slate-600 cursor-default`;
@@ -149,104 +158,199 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
     return `${baseClasses} bg-slate-700 border-slate-600 hover:bg-slate-600/50 hover:border-slate-500 cursor-pointer`;
   };
 
+  const isSubmitDisabled = question.options 
+    ? selectedOptionIndices.length === 0 
+    : numericalInputValue.trim() === '';
+
   return (
     <div>
       <ExplanationModal content={modalExplanation} onClose={() => setModalExplanation(null)} />
       <h2 className="text-lg sm:text-2xl font-normal sm:font-semibold mb-6 text-slate-100 max-h-48 overflow-y-auto sm:max-h-none sm:overflow-visible">{question.questionText}</h2>
-      <div className="space-y-3">
-        {question.options.map((option, index) => (
-          <div key={index}>
-            <div
-              onClick={() => handleOptionSelect(index)}
-              className={getOptionClasses(option, index)}
-              role={question.isMultiSelect ? 'checkbox' : 'radio'}
-              aria-checked={selectedOptionIndices.includes(index)}
-              tabIndex={isSubmitted ? -1 : 0}
-              onKeyDown={(e) => { if (!isSubmitted && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); handleOptionSelect(index); } }}
-            >
-              <div className="flex-shrink-0 w-6 h-6 mr-4 mt-1">
-                {isSubmitted && option.isCorrect && <CheckCircleIcon className="w-6 h-6 text-green-400" />}
-                {isSubmitted && !option.isCorrect && <XCircleIcon className="w-6 h-6 text-red-400" />}
-                {!isSubmitted && (
-                    question.isMultiSelect ? (
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-300 ${selectedOptionIndices.includes(index) ? 'border-cyan-400 bg-cyan-500' : 'border-slate-500 group-hover:border-cyan-500'}`}>
-                           {selectedOptionIndices.includes(index) && <CheckIcon className="w-3 h-3 text-white" />}
-                        </div>
-                    ) : (
-                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors duration-300 ${selectedOptionIndices.includes(index) ? 'border-cyan-400 bg-cyan-500' : 'border-slate-500 group-hover:border-cyan-500'}`}>
-                            {selectedOptionIndices.includes(index) && <div className="w-2 h-2 bg-white rounded-full"></div>}
-                        </div>
-                    )
-                )}
-              </div>
-              <div className="flex-grow min-w-0">
-                <p className="text-slate-200 break-words max-h-24 overflow-y-auto sm:max-h-none sm:overflow-visible">{option.text}</p>
-                {isSubmitted && (
-                   <div className="mt-2">
-                    <div className="hidden sm:block"> {/* Desktop: Show explanation directly */}
-                      <p className={`text-sm ${option.isCorrect ? 'text-green-300' : 'text-red-300'} break-words`}>
-                        {option.explanation}
-                      </p>
-                    </div>
+      
+      {question.options && (
+        <div className="space-y-3">
+          {question.options.map((option, index) => (
+            <div key={index}>
+              <div
+                onClick={() => handleOptionSelect(index)}
+                className={getOptionClasses(option, index)}
+                role={question.isMultiSelect ? 'checkbox' : 'radio'}
+                aria-checked={selectedOptionIndices.includes(index)}
+                tabIndex={isSubmitted ? -1 : 0}
+                onKeyDown={(e) => { if (!isSubmitted && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); handleOptionSelect(index); } }}
+              >
+                <div className="flex-shrink-0 w-6 h-6 mr-4 mt-1">
+                  {isSubmitted && option.isCorrect && <CheckCircleIcon className="w-6 h-6 text-green-400" />}
+                  {isSubmitted && !option.isCorrect && <XCircleIcon className="w-6 h-6 text-red-400" />}
+                  {!isSubmitted && (
+                      question.isMultiSelect ? (
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-300 ${selectedOptionIndices.includes(index) ? 'border-cyan-400 bg-cyan-500' : 'border-slate-500 group-hover:border-cyan-500'}`}>
+                            {selectedOptionIndices.includes(index) && <CheckIcon className="w-3 h-3 text-white" />}
+                          </div>
+                      ) : (
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors duration-300 ${selectedOptionIndices.includes(index) ? 'border-cyan-400 bg-cyan-500' : 'border-slate-500 group-hover:border-cyan-500'}`}>
+                              {selectedOptionIndices.includes(index) && <div className="w-2 h-2 bg-white rounded-full"></div>}
+                          </div>
+                      )
+                  )}
+                </div>
+                <div className="flex-grow min-w-0">
+                  <p className="text-slate-200 break-words max-h-24 overflow-y-auto sm:max-h-none sm:overflow-visible">{option.text}</p>
+                  {isSubmitted && (
+                    <div className="mt-2">
+                      <div className="hidden sm:block"> {/* Desktop: Show explanation directly */}
+                        <p className={`text-sm ${option.isCorrect ? 'text-green-300' : 'text-red-300'} break-words`}>
+                          {option.explanation}
+                        </p>
+                      </div>
 
-                    <div className="block sm:hidden"> {/* Mobile: Show toggle button */}
-                        <div className="flex justify-between items-center w-full">
-                            <button
-                                onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleExplanation(index);
-                                }}
-                                className="flex items-center text-sm text-slate-400 hover:text-cyan-400 transition-colors"
-                                aria-expanded={expandedExplanations.includes(index)}
-                                aria-controls={`explanation-${index}`}
+                      <div className="block sm:hidden"> {/* Mobile: Show toggle button */}
+                          <div className="flex justify-between items-center w-full">
+                              <button
+                                  onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleExplanation(index);
+                                  }}
+                                  className="flex items-center text-sm text-slate-400 hover:text-cyan-400 transition-colors"
+                                  aria-expanded={expandedExplanations.includes(index)}
+                                  aria-controls={`explanation-${index}`}
+                              >
+                                  <span>{expandedExplanations.includes(index) ? 'Hide' : 'Show'} explanation</span>
+                                  <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform duration-300 ${expandedExplanations.includes(index) ? 'rotate-180' : ''}`} />
+                              </button>
+                              <AnimatePresence>
+                                  {expandedExplanations.includes(index) && (
+                                      <motion.button
+                                          key={`expand-btn-${index}`}
+                                          initial={{ opacity: 0, scale: 0.5 }}
+                                          animate={{ opacity: 1, scale: 1 }}
+                                          exit={{ opacity: 0, scale: 0.5 }}
+                                          transition={{ duration: 0.2 }}
+                                          onClick={(e) => {
+                                              e.stopPropagation();
+                                              setModalExplanation(option.explanation);
+                                          }}
+                                          className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                                          aria-label="Expand explanation"
+                                      >
+                                          <ArrowsPointingOutIcon className="w-4 h-4" />
+                                      </motion.button>
+                                  )}
+                              </AnimatePresence>
+                          </div>
+                        <AnimatePresence>
+                          {expandedExplanations.includes(index) && (
+                            <motion.div
+                              id={`explanation-${index}`}
+                              className="overflow-hidden"
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.3 }}
                             >
-                                <span>{expandedExplanations.includes(index) ? 'Hide' : 'Show'} explanation</span>
-                                <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform duration-300 ${expandedExplanations.includes(index) ? 'rotate-180' : ''}`} />
-                            </button>
+                              <p className={`pt-2 text-sm ${option.isCorrect ? 'text-green-300' : 'text-red-300'} break-words max-h-28 overflow-y-auto`}>
+                                {option.explanation}
+                              </p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {question.numericalAnswer && (
+        <div className="space-y-4">
+          <input
+              type="number"
+              step="any"
+              value={numericalInputValue}
+              onChange={(e) => setNumericalInputValue(e.target.value)}
+              disabled={isSubmitted}
+              placeholder="Enter your answer"
+              className="w-full px-4 py-3 bg-slate-700 border-2 border-slate-600 rounded-lg focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition disabled:cursor-not-allowed disabled:opacity-70"
+          />
+          {isSubmitted && (
+              <div className={`p-3 rounded-md text-sm ${userAnswer?.isCorrect ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                <div className="flex items-start">
+                    <div className="flex-shrink-0 w-5 h-5 mr-2 mt-0.5">
+                        {userAnswer?.isCorrect 
+                            ? <CheckCircleIcon className="text-green-400" /> 
+                            : <XCircleIcon className="text-red-400" />
+                        }
+                    </div>
+                    <div className="flex-grow min-w-0">
+                        {/* Desktop: Show explanation directly */}
+                        <div className="hidden sm:block">
+                            <p className={`break-words ${userAnswer?.isCorrect ? 'text-green-300' : 'text-red-300'}`}>
+                                {question.numericalAnswer.explanation}
+                            </p>
+                        </div>
+
+                        {/* Mobile: Show toggle button */}
+                        <div className="block sm:hidden">
+                            <div className="flex justify-between items-center w-full">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsNumericalExplanationExpanded(prev => !prev);
+                                    }}
+                                    className="flex items-center text-slate-400 hover:text-cyan-400 transition-colors"
+                                    aria-expanded={isNumericalExplanationExpanded}
+                                    aria-controls={`numerical-explanation`}
+                                >
+                                    <span>{isNumericalExplanationExpanded ? 'Hide' : 'Show'} explanation</span>
+                                    <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform duration-300 ${isNumericalExplanationExpanded ? 'rotate-180' : ''}`} />
+                                </button>
+                                <AnimatePresence>
+                                    {isNumericalExplanationExpanded && (
+                                        <motion.button
+                                            key={`expand-btn-numerical`}
+                                            initial={{ opacity: 0, scale: 0.5 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.5 }}
+                                            transition={{ duration: 0.2 }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setModalExplanation(question.numericalAnswer.explanation);
+                                            }}
+                                            className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                                            aria-label="Expand explanation"
+                                        >
+                                            <ArrowsPointingOutIcon className="w-4 h-4" />
+                                        </motion.button>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                             <AnimatePresence>
-                                {expandedExplanations.includes(index) && (
-                                    <motion.button
-                                        key={`expand-btn-${index}`}
-                                        initial={{ opacity: 0, scale: 0.5 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.5 }}
-                                        transition={{ duration: 0.2 }}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setModalExplanation(option.explanation);
-                                        }}
-                                        className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
-                                        aria-label="Expand explanation"
+                                {isNumericalExplanationExpanded && (
+                                    <motion.div
+                                        id={`numerical-explanation`}
+                                        className="overflow-hidden"
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.3 }}
                                     >
-                                        <ArrowsPointingOutIcon className="w-4 h-4" />
-                                    </motion.button>
+                                        <p className={`pt-2 break-words max-h-28 overflow-y-auto ${userAnswer?.isCorrect ? 'text-green-300' : 'text-red-300'}`}>
+                                            {question.numericalAnswer.explanation}
+                                        </p>
+                                    </motion.div>
                                 )}
                             </AnimatePresence>
                         </div>
-                      <AnimatePresence>
-                        {expandedExplanations.includes(index) && (
-                          <motion.div
-                            id={`explanation-${index}`}
-                            className="overflow-hidden"
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                          >
-                            <p className={`pt-2 text-sm ${option.isCorrect ? 'text-green-300' : 'text-red-300'} break-words max-h-28 overflow-y-auto`}>
-                              {option.explanation}
-                            </p>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
                     </div>
-                  </div>
-                )}
-              </div>
+                </div>
             </div>
-          </div>
-        ))}
-      </div>
+          )}
+        </div>
+      )}
+
       <div className="mt-6 flex justify-end">
         {isSubmitted ? (
             <button 
@@ -258,7 +362,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
         ) : (
             <button 
                 onClick={handleSubmit}
-                disabled={selectedOptionIndices.length === 0}
+                disabled={isSubmitDisabled}
                 className="px-8 py-3 bg-cyan-600 text-white font-bold rounded-lg shadow-md hover:bg-cyan-500 transition-all disabled:bg-slate-600 disabled:cursor-not-allowed disabled:shadow-none"
             >
                 Submit

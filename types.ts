@@ -6,12 +6,20 @@ export interface Option {
 
 export interface Question {
   questionText: string;
-  options: Option[];
+  // Multiple choice
+  options?: Option[];
   isMultiSelect?: boolean;
+  // Numerical range
+  numericalAnswer?: {
+    min: number;
+    max: number;
+    explanation: string;
+  };
 }
 
 export interface Answer {
   questionIndex: number;
-  selectedOptionIndices: number[];
+  selectedOptionIndices?: number[];
+  numericalValue?: number;
   isCorrect: boolean;
 }

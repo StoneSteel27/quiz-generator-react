@@ -132,6 +132,14 @@ const DEMO_QUIZ_DATA: Question[] = [
         "explanation": "`useRef` is the hook used for creating references to DOM elements or for storing any mutable value."
       }
     ]
+  },
+  {
+    "questionText": "What is the boiling point of water in Celsius at standard atmospheric pressure?",
+    "numericalAnswer": {
+      "min": 100,
+      "max": 100,
+      "explanation": "At standard atmospheric pressure (1 atm), water boils at 100° Celsius (212° Fahrenheit)."
+    }
   }
 ];
 const JSON_TEMPLATE = JSON.stringify(DEMO_QUIZ_DATA, null, 2);
@@ -171,19 +179,29 @@ const ManualViewer: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     <h2 className="text-2xl font-semibold text-slate-100 border-b border-slate-600 pb-2">Structure Guide</h2>
                     <div>
                         <h3 className="text-lg font-bold text-cyan-400">The `Question` Object</h3>
-                        <p className="text-sm text-slate-400 mb-2">Each object in the root array is a question.</p>
+                        <p className="text-sm text-slate-400 mb-2">Each object in the root array is a question. A question must have either an `options` array or a `numericalAnswer` object.</p>
                         <ul className="list-disc list-inside space-y-1 text-sm bg-slate-700/50 p-4 rounded-md">
                             <li><code className="bg-slate-900 px-1 rounded-sm">questionText</code>: (String, required) The question itself.</li>
-                            <li><code className="bg-slate-900 px-1 rounded-sm">options</code>: (Array, required) An array of `Option` objects.</li>
+                            <li><code className="bg-slate-900 px-1 rounded-sm">options</code>: (Array, for Multiple-Choice) An array of `Option` objects.</li>
                             <li><code className="bg-slate-900 px-1 rounded-sm">isMultiSelect</code>: (Boolean, optional) Set to `true` for checkbox-style questions. Defaults to `false`.</li>
+                             <li><code className="bg-slate-900 px-1 rounded-sm">numericalAnswer</code>: (Object, for Numerical) An object defining the correct numerical range.</li>
                         </ul>
                     </div>
                      <div>
-                        <h3 className="text-lg font-bold text-cyan-400">The `Option` Object</h3>
+                        <h3 className="text-lg font-bold text-cyan-400">The `Option` Object (Multiple-Choice)</h3>
                         <p className="text-sm text-slate-400 mb-2">Each object inside the `options` array is a choice.</p>
                          <ul className="list-disc list-inside space-y-1 text-sm bg-slate-700/50 p-4 rounded-md">
                             <li><code className="bg-slate-900 px-1 rounded-sm">text</code>: (String, required) The answer text.</li>
                             <li><code className="bg-slate-900 px-1 rounded-sm">isCorrect</code>: (Boolean, required) `true` if this is a correct answer.</li>
+                            <li><code className="bg-slate-900 px-1 rounded-sm">explanation</code>: (String, required) Feedback shown after answering.</li>
+                        </ul>
+                    </div>
+                     <div>
+                        <h3 className="text-lg font-bold text-cyan-400">The `numericalAnswer` Object (Numerical)</h3>
+                        <p className="text-sm text-slate-400 mb-2">This object defines the correct answer for a numerical input question.</p>
+                         <ul className="list-disc list-inside space-y-1 text-sm bg-slate-700/50 p-4 rounded-md">
+                            <li><code className="bg-slate-900 px-1 rounded-sm">min</code>: (Number, required) The minimum acceptable value for a correct answer (inclusive).</li>
+                            <li><code className="bg-slate-900 px-1 rounded-sm">max</code>: (Number, required) The maximum acceptable value for a correct answer (inclusive).</li>
                             <li><code className="bg-slate-900 px-1 rounded-sm">explanation</code>: (String, required) Feedback shown after answering.</li>
                         </ul>
                     </div>
@@ -420,24 +438,31 @@ const App: React.FC = () => {
   }, [currentQuestionIndex, questions.length, currentView]);
 
   // --- Quiz Interaction Handlers ---
-  const handleAnswer = useCallback((questionIndex: number, selectedOptionIndices: number[]) => {
+  const handleAnswer = useCallback((questionIndex: number, answerData: { selectedOptionIndices?: number[], numericalValue?: number }) => {
     const question = questions[questionIndex];
     if (!question) return;
 
-    const correctOptionIndices = question.options
-      .map((option, index) => ({ isCorrect: option.isCorrect, index }))
-      .filter(o => o.isCorrect)
-      .map(o => o.index);
-      
-    let isCorrect: boolean;
-    if (question.isMultiSelect) {
-      isCorrect = correctOptionIndices.length === selectedOptionIndices.length && 
-                  correctOptionIndices.every(index => selectedOptionIndices.includes(index));
-    } else {
-      isCorrect = correctOptionIndices.length > 0 && selectedOptionIndices.length > 0 && correctOptionIndices[0] === selectedOptionIndices[0];
+    let isCorrect = false;
+    const { selectedOptionIndices, numericalValue } = answerData;
+
+    if (question.options && selectedOptionIndices !== undefined) {
+      const correctOptionIndices = question.options
+        .map((option, index) => ({ isCorrect: option.isCorrect, index }))
+        .filter(o => o.isCorrect)
+        .map(o => o.index);
+        
+      if (question.isMultiSelect) {
+        isCorrect = correctOptionIndices.length === selectedOptionIndices.length && 
+                    correctOptionIndices.every(index => selectedOptionIndices.includes(index));
+      } else {
+        isCorrect = correctOptionIndices.length > 0 && selectedOptionIndices.length > 0 && correctOptionIndices[0] === selectedOptionIndices[0];
+      }
+    } else if (question.numericalAnswer && numericalValue !== undefined) {
+      isCorrect = numericalValue >= question.numericalAnswer.min && numericalValue <= question.numericalAnswer.max;
     }
 
-    const newAnswer = { questionIndex, selectedOptionIndices, isCorrect };
+    const newAnswer: Answer = { questionIndex, ...answerData, isCorrect };
+    
     setAnswers(prev => {
         const existingIndex = prev.findIndex(a => a.questionIndex === questionIndex);
         if (existingIndex > -1) {
