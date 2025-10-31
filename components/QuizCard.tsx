@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { type Question, type Option, type Answer } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface QuizCardProps {
   question: Question;
@@ -27,6 +28,13 @@ const CheckIcon: React.FC<{className?: string}> = ({ className }) => (
       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
     </svg>
 );
+
+const XIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+);
+
 
 const ChevronDownIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={className}>
@@ -72,7 +80,7 @@ const ExplanationModal: React.FC<{ content: string | null; onClose: () => void }
               </button>
             </header>
             <div className="p-6 text-slate-300 max-h-[70vh] overflow-y-auto">
-              <p className="whitespace-pre-wrap">{content}</p>
+              <MarkdownRenderer content={content} />
             </div>
           </motion.div>
         </motion.div>
@@ -138,24 +146,24 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
     );
   };
 
-  const getOptionClasses = (option: Option, optionIndex: number): string => {
-    const baseClasses = "w-full text-left p-4 my-2 rounded-lg border-2 transition-all duration-300 flex items-start group";
+  const getOptionContainerClasses = (option: Option, optionIndex: number): string => {
+    const baseClasses = "w-full text-left my-2 rounded-lg border-2 transition-all duration-300";
     
     if (isSubmitted) {
         if (option.isCorrect) {
-            return `${baseClasses} bg-green-500/20 border-green-500 cursor-default`;
+            return `${baseClasses} bg-green-500/10 border-green-500 cursor-default`;
         }
         if (userAnswer?.selectedOptionIndices?.includes(optionIndex)) {
-            return `${baseClasses} bg-red-500/20 border-red-500 cursor-default`;
+            return `${baseClasses} bg-red-500/10 border-red-500 cursor-default`;
         }
-        return `${baseClasses} bg-slate-700 border-slate-600 cursor-default`;
+        return `${baseClasses} bg-slate-800 border-slate-600 cursor-default`;
     }
 
     if (selectedOptionIndices.includes(optionIndex)) {
-        return `${baseClasses} bg-cyan-500/30 border-cyan-400 cursor-pointer`;
+        return `${baseClasses} border-cyan-400 bg-cyan-500/10 cursor-pointer`;
     }
 
-    return `${baseClasses} bg-slate-700 border-slate-600 hover:bg-slate-600/50 hover:border-slate-500 cursor-pointer`;
+    return `${baseClasses} border-slate-600 bg-slate-800 hover:border-slate-500 cursor-pointer`;
   };
 
   const isSubmitDisabled = question.options 
@@ -165,7 +173,9 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
   return (
     <div>
       <ExplanationModal content={modalExplanation} onClose={() => setModalExplanation(null)} />
-      <h2 className="text-lg sm:text-2xl font-normal sm:font-semibold mb-6 text-slate-100 max-h-48 overflow-y-auto sm:max-h-none sm:overflow-visible">{question.questionText}</h2>
+      <div className="text-lg sm:text-2xl font-normal sm:font-semibold mb-6 text-slate-100 max-h-48 overflow-y-auto sm:max-h-none sm:overflow-visible">
+        <MarkdownRenderer content={question.questionText} />
+      </div>
       
       {question.options && (
         <div className="space-y-3">
@@ -173,35 +183,23 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
             <div key={index}>
               <div
                 onClick={() => handleOptionSelect(index)}
-                className={getOptionClasses(option, index)}
+                className={getOptionContainerClasses(option, index)}
                 role={question.isMultiSelect ? 'checkbox' : 'radio'}
                 aria-checked={selectedOptionIndices.includes(index)}
                 tabIndex={isSubmitted ? -1 : 0}
                 onKeyDown={(e) => { if (!isSubmitted && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); handleOptionSelect(index); } }}
               >
-                <div className="flex-shrink-0 w-6 h-6 mr-4 mt-1">
-                  {isSubmitted && option.isCorrect && <CheckCircleIcon className="w-6 h-6 text-green-400" />}
-                  {isSubmitted && !option.isCorrect && <XCircleIcon className="w-6 h-6 text-red-400" />}
-                  {!isSubmitted && (
-                      question.isMultiSelect ? (
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-300 ${selectedOptionIndices.includes(index) ? 'border-cyan-400 bg-cyan-500' : 'border-slate-500 group-hover:border-cyan-500'}`}>
-                            {selectedOptionIndices.includes(index) && <CheckIcon className="w-3 h-3 text-white" />}
-                          </div>
-                      ) : (
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors duration-300 ${selectedOptionIndices.includes(index) ? 'border-cyan-400 bg-cyan-500' : 'border-slate-500 group-hover:border-cyan-500'}`}>
-                              {selectedOptionIndices.includes(index) && <div className="w-2 h-2 bg-white rounded-full"></div>}
-                          </div>
-                      )
-                  )}
-                </div>
-                <div className="flex-grow min-w-0">
-                  <p className="text-slate-200 break-words max-h-24 overflow-y-auto sm:max-h-none sm:overflow-visible">{option.text}</p>
+                {/* Text and Explanation Part */}
+                <div className="p-4">
+                  <div className="text-slate-200 break-words">
+                    <MarkdownRenderer content={option.text} />
+                  </div>
                   {isSubmitted && (
                     <div className="mt-2">
                       <div className="hidden sm:block"> {/* Desktop: Show explanation directly */}
-                        <p className={`text-sm ${option.isCorrect ? 'text-green-300' : 'text-red-300'} break-words`}>
-                          {option.explanation}
-                        </p>
+                        <div className={`text-sm ${option.isCorrect ? 'text-green-300' : 'text-red-300'} break-words`}>
+                            <MarkdownRenderer content={option.explanation} />
+                        </div>
                       </div>
 
                       <div className="block sm:hidden"> {/* Mobile: Show toggle button */}
@@ -248,9 +246,9 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
                               exit={{ height: 0, opacity: 0 }}
                               transition={{ duration: 0.3 }}
                             >
-                              <p className={`pt-2 text-sm ${option.isCorrect ? 'text-green-300' : 'text-red-300'} break-words max-h-28 overflow-y-auto`}>
-                                {option.explanation}
-                              </p>
+                              <div className={`pt-2 text-sm ${option.isCorrect ? 'text-green-300' : 'text-red-300'} break-words`}>
+                                <MarkdownRenderer content={option.explanation} />
+                              </div>
                             </motion.div>
                           )}
                         </AnimatePresence>
@@ -287,9 +285,9 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
                     <div className="flex-grow min-w-0">
                         {/* Desktop: Show explanation directly */}
                         <div className="hidden sm:block">
-                            <p className={`break-words ${userAnswer?.isCorrect ? 'text-green-300' : 'text-red-300'}`}>
-                                {question.numericalAnswer.explanation}
-                            </p>
+                             <div className={`break-words ${userAnswer?.isCorrect ? 'text-green-300' : 'text-red-300'}`}>
+                                <MarkdownRenderer content={question.numericalAnswer.explanation} />
+                            </div>
                         </div>
 
                         {/* Mobile: Show toggle button */}
@@ -337,9 +335,9 @@ export const QuizCard: React.FC<QuizCardProps> = ({ question, questionIndex, use
                                         exit={{ height: 0, opacity: 0 }}
                                         transition={{ duration: 0.3 }}
                                     >
-                                        <p className={`pt-2 break-words max-h-28 overflow-y-auto ${userAnswer?.isCorrect ? 'text-green-300' : 'text-red-300'}`}>
-                                            {question.numericalAnswer.explanation}
-                                        </p>
+                                        <div className={`pt-2 break-words ${userAnswer?.isCorrect ? 'text-green-300' : 'text-red-300'}`}>
+                                            <MarkdownRenderer content={question.numericalAnswer.explanation} />
+                                        </div>
                                     </motion.div>
                                 )}
                             </AnimatePresence>

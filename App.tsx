@@ -96,19 +96,19 @@ const DEMO_QUIZ_DATA: Question[] = [
     "isMultiSelect": true,
     "options": [
       {
-        "text": "function MyComponent() { return <div>Hello</div>; }",
+        "text": "```jsx\nfunction MyComponent() { \n  return <div>Hello</div>; \n}\n```",
         "isCorrect": true,
-        "explanation": "This is a standard functional component, the modern and recommended way to write React components."
+        "explanation": "This is a standard **functional component**, the modern and recommended way to write React components."
       },
       {
-        "text": "<component>MyComponent</component>",
+        "text": "`<component>MyComponent</component>`",
         "isCorrect": false,
         "explanation": "This syntax is not valid for defining a component in JSX or JavaScript."
       },
       {
-        "text": "class MyComponent extends React.Component { render() { return <div>Hello</div>; } }",
+        "text": "```jsx\nclass MyComponent extends React.Component {\n  render() {\n    return <div>Hello</div>;\n  }\n}\n```",
         "isCorrect": true,
-        "explanation": "This is a class component. While still valid, functional components with hooks are now more common."
+        "explanation": "This is a **class component**. While still valid, functional components with hooks are now more common."
       }
     ]
   },
@@ -138,8 +138,29 @@ const DEMO_QUIZ_DATA: Question[] = [
     "numericalAnswer": {
       "min": 100,
       "max": 100,
-      "explanation": "At standard atmospheric pressure (1 atm), water boils at 100° Celsius (212° Fahrenheit)."
+      "explanation": "At standard atmospheric pressure (1 atm), water boils at **100° Celsius** (212° Fahrenheit)."
     }
+  },
+  {
+    "questionText": "What is the famous formula derived by Albert Einstein? This involves: \n\n*   $E$: Energy\n*   $m$: mass\n*   $c$: speed of light",
+    "isMultiSelect": false,
+    "options": [
+      {
+        "text": "$$E = mc^3$$",
+        "isCorrect": false,
+        "explanation": "Incorrect. The exponent for `c` is 2, not 3. The correct formula is $E=mc^2$."
+      },
+      {
+        "text": "$$E = mc^2$$",
+        "isCorrect": true,
+        "explanation": "Correct! This is the **mass-energy equivalence** formula. It states that mass and energy are interchangeable."
+      },
+      {
+        "text": "`E = m / c^2`",
+        "isCorrect": false,
+        "explanation": "Incorrect, mass is multiplied by the speed of light squared, not divided."
+      }
+    ]
   }
 ];
 const JSON_TEMPLATE = JSON.stringify(DEMO_QUIZ_DATA, null, 2);
@@ -179,7 +200,7 @@ const ManualViewer: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     <h2 className="text-2xl font-semibold text-slate-100 border-b border-slate-600 pb-2">Structure Guide</h2>
                     <div>
                         <h3 className="text-lg font-bold text-cyan-400">The `Question` Object</h3>
-                        <p className="text-sm text-slate-400 mb-2">Each object in the root array is a question. A question must have either an `options` array or a `numericalAnswer` object.</p>
+                        <p className="text-sm text-slate-400 mb-2">Each object in the root array is a question. A question must have either an `options` array or a `numericalAnswer` object. The `questionText`, option `text`, and `explanation` fields all support Markdown and LaTeX.</p>
                         <ul className="list-disc list-inside space-y-1 text-sm bg-slate-700/50 p-4 rounded-md">
                             <li><code className="bg-slate-900 px-1 rounded-sm">questionText</code>: (String, required) The question itself.</li>
                             <li><code className="bg-slate-900 px-1 rounded-sm">options</code>: (Array, for Multiple-Choice) An array of `Option` objects.</li>
